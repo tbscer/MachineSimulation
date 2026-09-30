@@ -1,0 +1,22 @@
+我重新构建了一下这个digital twin系统需求，按照这个需求定义，整个应用分为3个部分，其中：
+Twin.Communicate:
+	这个项目负责构建一个和3D 系统的通讯，使用RPC来实现；
+	通讯分为3个关键部分，类似3个区域，Axes、Cylinders和Sensors，每个部分的内容，是动态、可扩展的，
+	目前不定义详细的通讯细节，而是通过类似json序列化添加到每个部分
+	作为RPC的client端
+Twin.MotionSimulate：
+	这个项目是负责构建一个从运控到3D系统的逻辑体现，通过Twin.Communicate通讯，
+	Axis对象，通常对应一个运动机构，直线或者旋转运动，运动前需要激活、回零，
+		有回零传感器，和2个限位传感器，这些传感器是通过3D反馈的；
+	Cylinder对象，这个对象通常需要和3D对象交互反馈，由1~2个输出，和1~2个输入传感器；
+	Sensor对象，这类对象需要基于3D对象交互，获取反馈；
+Twin.Application:
+	这个项目是负责构建一个应用程序，相对于对齐整个3D物理世界，会构建整个运控流程，比如某些轴的运动，获取某些传感器的反馈
+	
+## 优化项目
+  当前项目已经具备能和blender完成对应的控制和反馈，但整个框架还需要重构；
+  * Twin.Communicate：只保留BlenderRpcClient，不再需要Grpc client；
+  * Twin.Application：不包含Twin.Communicate，所有通讯有Twin.MotionSimulate；
+  * Twin.MotionSimulate：负责处理所有仿真交互，包含功能：
+	* 定期获取blender中仿真对象的状态，将状态同步到对应的Axis、Cylinder、Input；
+	* 将Axis的指令，包括Home、Move、Jog等，发送到blender仿真对象；

@@ -1,0 +1,394 @@
+<Window x:Class="Twin.Application.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:Twin.Application.ViewModels"
+        xmlns:conv="clr-namespace:Twin.Application.Converters"
+        mc:Ignorable="d"
+        Title="Twin Digital-Twin Runtime" Height="640" Width="900">
+    <Window.DataContext>
+        <vm:MainWindowViewModel />
+    </Window.DataContext>
+
+    <Window.Resources>
+        <conv:BoolToTextConverter x:Key="BoolText" />
+    </Window.Resources>
+
+    <DockPanel>
+        <!-- Top: connection bar -->
+        <Border DockPanel.Dock="Top" Background="#F0F0F0" Padding="8" BorderBrush="#D0D0D0" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="连接 (127.0.0.1:9877)" Padding="10,4"
+                        Command="{Binding ConnectCommand}"/>
+                <Button Content="断开" Padding="10,4" Margin="6,0,0,0"
+                        Command="{Binding DisconnectCommand}"/>
+                <TextBlock Text="{Binding Status}" VerticalAlignment="Center" Margin="14,0,0,0"
+                           FontWeight="Bold">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="Gray"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                    <Setter Property="Foreground" Value="Green"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <TextBlock Text="|" Margin="14,0" VerticalAlignment="Center" Foreground="#C0C0C0"/>
+                <TextBlock Text="使用 .tmp\mock_blender_server.py 可在无 Blender 时联调"
+                           VerticalAlignment="Center" Foreground="#888888" FontStyle="Italic"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Bottom: log -->
+        <GroupBox DockPanel.Dock="Bottom" Header="日志" Height="180" Margin="4">
+            <TextBox Text="{Binding Log, Mode=OneWay}" IsReadOnly="True"
+                     VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" FontFamily="Consolas"/>
+        </GroupBox>
+
+        <!-- Center: tabs by object kind -->
+        <TabControl Margin="4">
+
+            <!-- ============== Axis tab ============== -->
+            <TabItem Header="轴 (Axis)">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Axes}" Margin="8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:AxisViewModel}">
+                                <GroupBox Header="{Binding Name}" Padding="8" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition/><RowDefinition/><RowDefinition/>
+                                                <RowDefinition/><RowDefinition/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="位置"/>
+                                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Position, StringFormat=F3}"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="已回零"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Homed, Converter={StaticResource BoolText}, ConverterParameter=是|否}"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="原点传感器"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding HomeSensor, Converter={StaticResource BoolText}, ConverterParameter=触发|—}"/>
+                                            <TextBlock Grid.Row="3" Grid.Column="0" Text="正限位"/>
+                                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PosLimit, Converter={StaticResource BoolText}, ConverterParameter=触发|—}"/>
+                                            <TextBlock Grid.Row="4" Grid.Column="0" Text="负限位"/>
+                                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding NegLimit, Converter={StaticResource BoolText}, ConverterParameter=触发|—}"/>
+                                        </Grid>
+
+                                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                            <TextBlock Text="速度 (units/s):" VerticalAlignment="Center"/>
+                                            <TextBox Text="{Binding Speed, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=F1}"
+                                                     Width="80" Margin="6,0,0,0"/>
+                                        </StackPanel>
+
+                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                            <TextBlock Text="目标:" VerticalAlignment="Center"/>
+                                            <TextBox Text="{Binding TargetText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                     Width="100" Margin="6,0,0,0"/>
+                                            <Button Content="移动到此" Padding="8,2" Margin="6,0,0,0"
+                                                    Command="{Binding MoveToCommand}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                            <Button Content="Home"  Padding="8,2" Margin="0,0,6,0" Command="{Binding HomeCommand}"/>
+                                            <Button Content="Jog -" Padding="8,2" Margin="0,0,6,0" Command="{Binding JogNegativeCommand}"/>
+                                            <Button Content="Jog +" Padding="8,2" Margin="0,0,6,0" Command="{Binding JogPositiveCommand}"/>
+                                            <Button Content="Stop"  Padding="8,2"                   Command="{Binding StopCommand}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </GroupBox>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============== Cylinder tab ============== -->
+            <TabItem Header="气缸 (Cylinder)">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Cylinders}" Margin="8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:CylinderViewModel}">
+                                <GroupBox Header="{Binding Name}" Padding="8" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <TextBlock Text="State1:"/>
+                                        <TextBlock Text="{Binding State1, Converter={StaticResource BoolText}, ConverterParameter=TRUE|FALSE}"/>
+                                        <TextBlock Text="State2:" Margin="0,6,0,0"/>
+                                        <TextBlock Text="{Binding State2, Converter={StaticResource BoolText}, ConverterParameter=TRUE|FALSE}"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                            <Button Content="伸出" Padding="8,2" Margin="0,0,6,0" Command="{Binding ExtendCommand}"/>
+                                            <Button Content="缩回" Padding="8,2"                   Command="{Binding RetractCommand}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </GroupBox>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============== Input tab ============== -->
+            <TabItem Header="输入 (Input)">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Inputs}" Margin="8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:InputViewModel}">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <TextBlock Text="{Binding Name}" Width="220"/>
+                                    <TextBlock Text="{Binding State, Converter={StaticResource BoolText}, ConverterParameter=TRUE|FALSE}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============== Output tab ============== -->
+            <TabItem Header="输出 (Output)">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Outputs}" Margin="8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:OutputViewModel}">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <TextBlock Text="{Binding Name}" Width="200" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding State, Converter={StaticResource BoolText}, ConverterParameter=TRUE|FALSE}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============== Collision tab ============== -->
+            <TabItem Header="碰撞 (Collision)">
+                <StackPanel Margin="8">
+                    <GroupBox Header="碰撞检测" Padding="10">
+                        <StackPanel>
+                            <CheckBox Content="启用碰撞检测"
+                                      IsChecked="{Binding IsCollisionEnabled, Mode=TwoWay}"
+                                      VerticalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,12,0,0" VerticalAlignment="Center">
+                                <Ellipse Width="18" Height="18"
+                                         Stroke="#888" StrokeThickness="1"
+                                         VerticalAlignment="Center">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Setter Property="Fill" Value="Gray"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCollisionEnabled}" Value="True">
+                                                    <Setter Property="Fill" Value="Green"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsCollide}" Value="True">
+                                                    <Setter Property="Fill" Value="Red"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+                                <TextBlock Text="未连接" Margin="10,0,0,0" FontWeight="Bold" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="检测未启用"/>
+                                            <Setter Property="Foreground" Value="Gray"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCollisionEnabled}" Value="True">
+                                                    <Setter Property="Text" Value="检测已启用"/>
+                                                    <Setter Property="Foreground" Value="DarkGreen"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsCollide}" Value="True">
+                                                    <Setter Property="Text" Value="碰撞中！"/>
+                                                    <Setter Property="Foreground" Value="Red"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                            <TextBlock Text="{Binding CollisionDetail}"
+                                       Margin="0,8,0,0" Foreground="#666" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </GroupBox>
+                </StackPanel>
+            </TabItem>
+
+            <!-- ============== Vacuum Nozzle tab ============== -->
+            <TabItem Header="吸嘴(Vacuum Nozzle)">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding VacuumNozzles}" Margin="8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:VacuumNozzleViewModel}">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <TextBlock Text="{Binding Name}" Width="200" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Is Attached:" Margin="8,0"/>
+                                    <TextBlock Text="{Binding IsAttached, Converter={StaticResource BoolText}, ConverterParameter=TRUE|FALSE}" VerticalAlignment="Center"/>
+
+                                    <Button Content="吸附" Padding="8,2" Margin="20,0,6,0" Command="{Binding AttachCommand}"/>
+                                    <TextBlock Text="{Binding State, Converter={StaticResource BoolText}, ConverterParameter=TRUE|FALSE}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============== Motion Modules tab ============== -->
+            <TabItem Header="运动模块 (Motion Modules)">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="8">
+                        <GroupBox Header="一键回零 (Auto Home Sequence)" Padding="10" Margin="0,0,0,12">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="一键回零" Padding="16,4" MinWidth="120"
+                                            Command="{Binding AutoHomeAllCommand}"/>
+                                    <TextBlock VerticalAlignment="Center" Margin="12,0,0,0"
+                                               Foreground="#888" FontStyle="Italic">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="空闲"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsAutoHoming}" Value="True">
+                                                        <Setter Property="Text" Value="执行中..."/>
+                                                        <Setter Property="Foreground" Value="DarkOrange"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                                <TextBlock Margin="0,8,0,0" Foreground="#666" TextWrapping="Wrap"
+                                           Text="序列: 1) 两个 BondHead Z 回零（并行）→ 2) 两个 BondHead Y 点动到限位（并行，左正限位/右负限位）→ 3) 左 BondHead Y 回零，再右 BondHead Y 回零（串行）→ 4) 两个 BondHead X/R 回零 + 两个 Flipper 全部回零（并行）"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="取放料循环 (Pick &amp; Place Cycle)" Padding="10" Margin="0,0,0,12">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="开始循环" Padding="16,4" MinWidth="100"
+                                            Command="{Binding StartPickPlaceCommand}"/>
+                                    <Button Content="停止循环" Padding="16,4" MinWidth="100" Margin="8,0,0,0"
+                                            Command="{Binding StopPickPlaceCommand}"/>
+                                    <TextBlock VerticalAlignment="Center" Margin="12,0,0,0"
+                                               Foreground="#888" FontStyle="Italic">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="空闲"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsCycleRunning}" Value="True">
+                                                        <Setter Property="Text" Value="循环运行中..."/>
+                                                        <Setter Property="Foreground" Value="DarkOrange"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                                <TextBlock Margin="0,8,0,0" Foreground="#666" TextWrapping="Wrap"
+                                           Text="启动 T1~T4 四个并发 Task：T1/T2 键合头（XYZR 回 0 → 等翻转 picked done → 放置点 Z 下压 200ms → 置 wait pick → 取料点 Z 下压 200ms → 退回 0 → 循环）；T3/T4 翻转（Z/R 回 0 → 置 wait pick → 取公共互斥量 M → R 翻转 180° / Z -30 保持 100ms → 回 0 → 释放 M → 置 picked done → 等 wait pick → 循环）。互斥量 M 由两个翻转共享，同一时刻只允许一侧取料。停止会取消 4 个 Task 并停止所有相关轴。"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="BondHead - Left  (左键合头)" Padding="10" Margin="0,0,0,8">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="序列: Z → (X, Y, R) 并行"
+                                           VerticalAlignment="Center" Margin="0,0,16,0" Foreground="#666"/>
+                                <Button Content="Home All" Padding="16,4" MinWidth="100"
+                                        Command="{Binding HomeBondHeadLeftCommand}"/>
+                                <TextBlock VerticalAlignment="Center" Margin="12,0,0,0"
+                                           Foreground="#888" FontStyle="Italic">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="空闲"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsBondHeadLeftHoming}" Value="True">
+                                                    <Setter Property="Text" Value="正在 Home..."/>
+                                                    <Setter Property="Foreground" Value="DarkOrange"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="BondHead - Right  (右键合头)" Padding="10" Margin="0,0,0,8">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="序列: Z → (X, Y, R) 并行"
+                                           VerticalAlignment="Center" Margin="0,0,16,0" Foreground="#666"/>
+                                <Button Content="Home All" Padding="16,4" MinWidth="100"
+                                        Command="{Binding HomeBondHeadRightCommand}"/>
+                                <TextBlock VerticalAlignment="Center" Margin="12,0,0,0"
+                                           Foreground="#888" FontStyle="Italic">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="空闲"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsBondHeadRightHoming}" Value="True">
+                                                    <Setter Property="Text" Value="正在 Home..."/>
+                                                    <Setter Property="Foreground" Value="DarkOrange"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Flipper - Left  (左翻转)" Padding="10" Margin="0,0,0,8">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="序列: Z → R"
+                                           VerticalAlignment="Center" Margin="0,0,16,0" Foreground="#666"/>
+                                <Button Content="Home All" Padding="16,4" MinWidth="100"
+                                        Command="{Binding HomeFlipperLeftCommand}"/>
+                                <TextBlock VerticalAlignment="Center" Margin="12,0,0,0"
+                                           Foreground="#888" FontStyle="Italic">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="空闲"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsFlipperLeftHoming}" Value="True">
+                                                    <Setter Property="Text" Value="正在 Home..."/>
+                                                    <Setter Property="Foreground" Value="DarkOrange"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Flipper - Right  (右翻转)" Padding="10" Margin="0,0,0,8">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="序列: Z → R"
+                                           VerticalAlignment="Center" Margin="0,0,16,0" Foreground="#666"/>
+                                <Button Content="Home All" Padding="16,4" MinWidth="100"
+                                        Command="{Binding HomeFlipperRightCommand}"/>
+                                <TextBlock VerticalAlignment="Center" Margin="12,0,0,0"
+                                           Foreground="#888" FontStyle="Italic">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="空闲"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsFlipperRightHoming}" Value="True">
+                                                    <Setter Property="Text" Value="正在 Home..."/>
+                                                    <Setter Property="Foreground" Value="DarkOrange"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <TextBlock Margin="0,8,0,0" Foreground="#888" FontStyle="Italic" TextWrapping="Wrap"
+                                   Text="点击按钮触发对应 MotionModule.Home() 序列。可在「轴」标签页观察各轴 Homed / Position 实时变化；日志区会记录开始、完成与异常。"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>
